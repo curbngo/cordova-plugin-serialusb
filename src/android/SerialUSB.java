@@ -13,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.Arrays;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -279,6 +280,8 @@ public class SerialUSB extends CordovaPlugin {
 
 						Log.d(TAG, "Serial port opened!");
 						callbackContext.success("Serial port opened!");
+					} else {
+						Log.d(TAG, "UsbDeviceConnection connection is null");
 					}
 				}
 				else {
@@ -331,7 +334,18 @@ public class SerialUSB extends CordovaPlugin {
 					try {
 						Log.d(TAG, data);
 						byte[] buffer = data.getBytes();
-						port.write(buffer, writeWait);
+						Log.d(TAG, "Buffer: " + Arrays.toString(buffer));
+						if (buffer.length > 0 && buffer[0] == 0x1C) {
+							byte[] enveloped = createDataPacket(buffer);
+							Log.d(TAG, "Enveloped Data: " + Arrays.toString(enveloped));
+							port.write(enveloped, writeWait);
+						} else {
+							if(buffer.length == 1 && buffer[0] == 0x06){
+								Log.d(TAG, "Sending ACK");
+							}
+							// If the first byte is not FS, write the original data
+							port.write(buffer, writeWait);
+						}
 						callbackContext.success();
 					}
 					catch (IOException e) {
@@ -635,5 +649,35 @@ public class SerialUSB extends CordovaPlugin {
 	private void addPropertyBytes(JSONObject obj, String key, byte[] bytes) {
 		String string = Base64.encodeToString(bytes, Base64.NO_WRAP);
 		this.addProperty(obj, key, string);
+	}
+
+	private byte[] createDataPacket(byte[] buffer) {
+		// Message envelope construction logic
+		int dataSize = buffer.length;
+		int packetLength = dataSize + 3; // 3 bytes for STX, ETX, and LRC
+		byte[] packet = new byte[packetLength];
+
+		// Set STX (Start of text) at the beginning of the packet
+		packet[0] = 0x02;
+
+		// Copy the data buffer into the packet
+		System.arraycopy(buffer, 0, packet, 1, dataSize);
+
+		// Set ETX (End of text) at the end of the packet
+		packet[packetLength - 2] = 0x03;
+
+		// Calculate and set LRC (Longitudinal Redundancy Check)
+		byte lrc = calculateLRC(packet, 1, packetLength - 2);
+		packet[packetLength - 1] = lrc;
+
+		return packet;
+	}
+
+	private byte calculateLRC(byte[] data, int offset, int length) {
+		byte lrc = 0;
+		for (int i = offset; i < offset + length; i++) {
+			lrc ^= data[i];
+		}
+		return lrc;
 	}
 }
