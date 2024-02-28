@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-serialusb",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Cordova plugin for Android Serial USB communication",
   "cordova": {
     "id": "cordova-plugin-serialusb",
