@@ -3,7 +3,7 @@ cordova-plugin-serialusb
 Cordova plugin for Android Serial USB communication (easily connect an Arduino board to an Android device).
 --------------------
 
-Release 1.0.2, 02.28.2023.
+Release 1.0.3, 02.28.2023.
 
 - Added vendor-specific change for GP Flex Semi-Integrated envelope requirements
 
